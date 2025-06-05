@@ -4,5 +4,4 @@ This is a overengineered project on running a small toy train as a delivery for 
 
 ## Arduino IDE Setup
 Board: XIAO_ESP32C6
-
 Port: (ESP Family)
