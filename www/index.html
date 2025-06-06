@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toy Train Controller PWA</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        /* Custom styles for the app */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 1rem;
+            box-sizing: border-box;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 1.5rem; /* More rounded corners */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            max-width: 450px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        .control-group {
+            border: 1px solid #e0e0e0;
+            border-radius: 1rem;
+            padding: 1rem;
+            background-color: #f9f9f9;
+        }
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 0.75rem;
+            background: #d1d5db;
+            border-radius: 0.5rem;
+            outline: none;
+            opacity: 0.7;
+            transition: opacity .2s;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+        }
+        input[type="range"]:hover {
+            opacity: 1;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 1.75rem;
+            height: 1.75rem;
+            border-radius: 50%;
+            background: #3b82f6; /* Blue */
+            cursor: grab;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            border: 2px solid #ffffff;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 1.75rem;
+            height: 1.75rem;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: grab;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            border: 2px solid #ffffff;
+        }
+        button {
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: none;
+            outline: none;
+            background-image: linear-gradient(to right, #60a5fa, #3b82f6); /* Blue gradient */
+        }
+        button:hover {
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+        button:active {
+            transform: translateY(0);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .message-box {
+            background-color: #fefcbf; /* Yellow background */
+            color: #854d0c; /* Dark yellow text */
+            padding: 0.75rem;
+            border-radius: 0.75rem;
+            margin-top: 1rem;
+            display: none; /* Hidden by default */
+            word-wrap: break-word;
+        }
+        .message-box.show {
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+    <div class="container">
+        <h1 class="text-3xl font-bold text-center text-blue-700 mb-4">🚂 Toy Train Controller</h1>
+
+        <div class="control-group">
+            <h2 class="text-xl font-semibold mb-3 text-blue-600">Connection</h2>
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
+                <button id="connectButton" class="px-6 py-3 bg-blue-500 text-white font-semibold rounded-xl w-full sm:w-auto hover:bg-blue-600 active:bg-blue-700">
+                    Connect to Train
+                </button>
+                <div id="connectionStatus" class="text-sm font-medium text-gray-600 flex items-center">
+                    <span class="inline-block w-3 h-3 rounded-full mr-2 bg-red-500" id="statusIndicator"></span>
+                    Disconnected
+                </div>
+            </div>
+            <div id="messageBox" class="message-box" role="alert"></div>
+        </div>
+
+        <div class="control-group">
+            <h2 class="text-xl font-semibold mb-3 text-blue-600">Speed Control</h2>
+            <input type="range" id="speedSlider" min="0" max="255" value="0" class="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer">
+            <div class="flex justify-between text-sm mt-2">
+                <span>0</span>
+                <span id="speedValue">0</span>
+                <span>255</span>
+            </div>
+            <div class="mt-4 flex flex-wrap justify-center gap-3">
+                <button id="stopButton" class="px-5 py-2 bg-red-500 text-white font-semibold rounded-xl hover:bg-red-600 active:bg-red-700 flex-grow">Stop</button>
+                <button id="forwardButton" class="px-5 py-2 bg-green-500 text-white font-semibold rounded-xl hover:bg-green-600 active:bg-green-700 flex-grow">Forward</button>
+                <button id="backwardButton" class="px-5 py-2 bg-yellow-500 text-white font-semibold rounded-xl hover:bg-yellow-600 active:bg-yellow-700 flex-grow">Backward</button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="control-group">
+                <h2 class="text-xl font-semibold mb-3 text-blue-600">Lights</h2>
+                <button id="toggleLightsButton" class="px-5 py-3 bg-gray-500 text-white font-semibold rounded-xl w-full hover:bg-gray-600 active:bg-gray-700">Toggle Lights OFF</button>
+            </div>
+
+            <div class="control-group">
+                <h2 class="text-xl font-semibold mb-3 text-blue-600">Horn</h2>
+                <button id="hornButton" class="px-5 py-3 bg-orange-500 text-white font-semibold rounded-xl w-full hover:bg-orange-600 active:bg-orange-700">Honk Horn</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(registration => {
+                        console.log('Service Worker registered:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.error('Service Worker registration failed:', error);
+                    });
+            });
+        }
+
+        // --- BLE UUIDs (Must match ESP32 Arduino code) ---
+        const SERVICE_UUID = '4fafc201-1fb5-459e-8fcc-c5c9c331914b';
+        const CHARACTERISTIC_UUID_SPEED = 'beb5483e-36e1-4688-b7f5-ea07361b26a8';
+        const CHARACTERISTIC_UUID_DIRECTION = 'a8a2d1d4-1f19-4b6e-b302-3c2c1a89c9c1';
+        const CHARACTERISTIC_UUID_LIGHTS = 'e7e3f1c1-4b1a-4d3f-8c3b-7f2a1b9d4c7d';
+        const CHARACTERISTIC_UUID_HORN = 'f3d7c5b9-8e2b-4a5c-9d1a-6e3c2b1d4a8f';
+
+        // --- Global BLE Objects ---
+        let bluetoothDevice;
+        let trainService;
+        let speedCharacteristic;
+        let directionCharacteristic;
+        let lightsCharacteristic;
+        let hornCharacteristic;
+
+        // --- UI Elements ---
+        const connectButton = document.getElementById('connectButton');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const messageBox = document.getElementById('messageBox');
+
+        const speedSlider = document.getElementById('speedSlider');
+        const speedValueSpan = document.getElementById('speedValue');
+        const stopButton = document.getElementById('stopButton');
+        const forwardButton = document.getElementById('forwardButton');
+        const backwardButton = document.getElementById('backwardButton');
+
+        const toggleLightsButton = document.getElementById('toggleLightsButton');
+        const hornButton = document.getElementById('hornButton');
+
+        let lightsOn = false; // State for lights
+
+        // --- Helper Functions ---
+
+        /**
+         * Displays a message in the message box.
+         * @param {string} message The message to display.
+         * @param {string} type Optional. 'error' for error messages (red).
+         */
+        function showMessage(message, type = 'info') {
+            messageBox.textContent = message;
+            messageBox.classList.remove('hidden', 'bg-red-200', 'text-red-800', 'bg-yellow-200', 'text-yellow-800');
+            messageBox.classList.add('show'); // Ensure it's visible
+            if (type === 'error') {
+                messageBox.classList.add('bg-red-200', 'text-red-800');
+            } else {
+                messageBox.classList.add('bg-yellow-200', 'text-yellow-800');
+            }
+            // Auto-hide after a few seconds unless it's an error
+            if (type !== 'error') {
+                setTimeout(() => {
+                    messageBox.classList.remove('show');
+                    // messageBox.classList.add('hidden'); // Re-hide after fading
+                }, 5000);
+            }
+        }
+
+        /**
+         * Updates the connection status UI.
+         * @param {boolean} connected True if connected, false otherwise.
+         */
+        function updateConnectionStatus(connected) {
+            if (connected) {
+                statusIndicator.classList.remove('bg-red-500');
+                statusIndicator.classList.add('bg-green-500');
+                connectionStatus.lastChild.textContent = 'Connected';
+                connectButton.textContent = 'Disconnect';
+                connectButton.classList.remove('bg-blue-500', 'hover:bg-blue-600', 'active:bg-blue-700');
+                connectButton.classList.add('bg-gray-500', 'hover:bg-gray-600', 'active:bg-gray-700');
+            } else {
+                statusIndicator.classList.remove('bg-green-500');
+                statusIndicator.classList.add('bg-red-500');
+                connectionStatus.lastChild.textContent = 'Disconnected';
+                connectButton.textContent = 'Connect to Train';
+                connectButton.classList.remove('bg-gray-500', 'hover:bg-gray-600', 'active:bg-gray-700');
+                connectButton.classList.add('bg-blue-500', 'hover:bg-blue-600', 'active:bg-blue-700');
+            }
+            // Enable/disable controls based on connection
+            const controls = [speedSlider, stopButton, forwardButton, backwardButton, toggleLightsButton, hornButton];
+            controls.forEach(control => {
+                control.disabled = !connected;
+                if (!connected) {
+                    control.classList.add('opacity-50', 'cursor-not-allowed');
+                } else {
+                    control.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+            });
+        }
+
+        /**
+         * Writes a value to a specified BLE characteristic.
+         * @param {BluetoothRemoteGATTCharacteristic} characteristic The characteristic to write to.
+         * @param {number} value The 8-bit unsigned integer value to write.
+         */
+        async function writeCharacteristic(characteristic, value) {
+            if (!characteristic) {
+                showMessage('BLE characteristic not available.', 'error');
+                return;
+            }
+            try {
+                const data = new Uint8Array([value]);
+                await characteristic.writeValue(data);
+                console.log(`Wrote ${value} to ${characteristic.uuid}`);
+            } catch (error) {
+                showMessage(`Error writing to characteristic: ${error.message}`, 'error');
+                console.error('Error writing to characteristic:', error);
+            }
+        }
+
+        // --- Event Handlers ---
+
+        /**
+         * Handles the connection and disconnection process.
+         */
+        connectButton.addEventListener('click', async () => {
+            if (bluetoothDevice && bluetoothDevice.gatt.connected) {
+                // Disconnect if already connected
+                console.log('Disconnecting from device...');
+                bluetoothDevice.gatt.disconnect();
+                updateConnectionStatus(false);
+                showMessage('Disconnected from train.', 'info');
+                return;
+            }
+
+            if (!navigator.bluetooth) {
+                showMessage('Web Bluetooth is not supported on this browser or device. Please use Chrome on Android or Desktop.', 'error');
+                return;
+            }
+
+            try {
+                showMessage('Scanning for train...', 'info');
+                bluetoothDevice = await navigator.bluetooth.requestDevice({
+                    filters: [{ services: [SERVICE_UUID] }],
+                    // Optional: include "name" filter if you know the exact name of your ESP32
+                    // filters: [{ name: 'ESP32_Train_Control' }]
+                });
+
+                if (!bluetoothDevice) {
+                    showMessage('No device selected or found.', 'info');
+                    return;
+                }
+
+                bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
+                showMessage(`Connecting to ${bluetoothDevice.name || 'Unknown Device'}...`, 'info');
+                const server = await bluetoothDevice.gatt.connect();
+
+                trainService = await server.getPrimaryService(SERVICE_UUID);
+                speedCharacteristic = await trainService.getCharacteristic(CHARACTERISTIC_UUID_SPEED);
+                directionCharacteristic = await trainService.getCharacteristic(CHARACTERISTIC_UUID_DIRECTION);
+                lightsCharacteristic = await trainService.getCharacteristic(CHARACTERISTIC_UUID_LIGHTS);
+                hornCharacteristic = await trainService.getCharacteristic(CHARACTERISTIC_UUID_HORN);
+
+                updateConnectionStatus(true);
+                showMessage('Successfully connected to the train!', 'info');
+                console.log('Connected to train and characteristics obtained.');
+
+                // Initialize UI with current values from ESP32 if available (optional read)
+                const initialSpeed = await speedCharacteristic.readValue();
+                speedSlider.value = new Uint8Array(initialSpeed.buffer)[0];
+                speedValueSpan.textContent = speedSlider.value;
+                const initialLights = await lightsCharacteristic.readValue();
+                lightsOn = (new Uint8Array(initialLights.buffer)[0] === 1);
+                toggleLightsButton.textContent = `Toggle Lights ${lightsOn ? 'ON' : 'OFF'}`;
+
+            } catch (error) {
+                showMessage(`Connection error: ${error.message}. Make sure the ESP32 is powered on and advertising.`, 'error');
+                console.error('BLE connection error:', error);
+                updateConnectionStatus(false);
+            }
+        });
+
+        /**
+         * Handles device disconnection event.
+         * @param {Event} event
+         */
+        function onDisconnected(event) {
+            const device = event.target;
+            showMessage(`${device.name || 'Device'} disconnected.`, 'info');
+            console.log(`${device.name || 'Device'} disconnected.`);
+            updateConnectionStatus(false);
+        }
+
+        // Speed Control
+        speedSlider.addEventListener('input', () => {
+            const speed = parseInt(speedSlider.value, 10);
+            speedValueSpan.textContent = speed;
+            if (bluetoothDevice && bluetoothDevice.gatt.connected) {
+                writeCharacteristic(speedCharacteristic, speed);
+            }
+        });
+
+        stopButton.addEventListener('click', () => {
+            speedSlider.value = 0;
+            speedValueSpan.textContent = 0;
+            if (bluetoothDevice && bluetoothDevice.gatt.connected) {
+                writeCharacteristic(speedCharacteristic, 0); // Set speed to 0
+                writeCharacteristic(directionCharacteristic, 0); // Set direction to STOP
+            }
+            showMessage('Train stopped.', 'info');
+        });
+
+        forwardButton.addEventListener('click', () => {
+            if (bluetoothDevice && bluetoothDevice.gatt.connected) {
+                writeCharacteristic(directionCharacteristic, 1); // Set direction to FORWARD
+                if (parseInt(speedSlider.value, 10) === 0) { // If speed is 0, set a default
+                    speedSlider.value = 100;
+                    speedValueSpan.textContent = 100;
+                    writeCharacteristic(speedCharacteristic, 100);
+                }
+            }
+            showMessage('Train moving forward.', 'info');
+        });
+
+        backwardButton.addEventListener('click', () => {
+            if (bluetoothDevice && bluetoothDevice.gatt.connected) {
+                writeCharacteristic(directionCharacteristic, 2); // Set direction to BACKWARD
+                if (parseInt(speedSlider.value, 10) === 0) { // If speed is 0, set a default
+                    speedSlider.value = 100;
+                    speedValueSpan.textContent = 100;
+                    writeCharacteristic(speedCharacteristic, 100);
+                }
+            }
+            showMessage('Train moving backward.', 'info');
+        });
+
+        // Lights Control
+        toggleLightsButton.addEventListener('click', () => {
+            lightsOn = !lightsOn;
+            const lightValue = lightsOn ? 1 : 0;
+            if (bluetoothDevice && bluetoothDevice.gatt.connected) {
+                writeCharacteristic(lightsCharacteristic, lightValue);
+            }
+            toggleLightsButton.textContent = `Toggle Lights ${lightsOn ? 'ON' : 'OFF'}`;
+            showMessage(`Lights turned ${lightsOn ? 'ON' : 'OFF'}.`, 'info');
+        });
+
+        // Horn Control
+        hornButton.addEventListener('click', () => {
+            if (bluetoothDevice && bluetoothDevice.gatt.connected) {
+                writeCharacteristic(hornCharacteristic, 1); // Send 1 to honk
+                // Note: ESP32 code should handle momentary honk and reset its internal state if needed.
+            }
+            showMessage('Horn honked!', 'info');
+        });
+
+        // Initialize UI state
+        updateConnectionStatus(false);
+    </script>
+</body>
+</html>
