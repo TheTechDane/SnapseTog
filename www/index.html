@@ -347,8 +347,8 @@
                 else
                     backwardsStopIndicator.classList.add('bg-green-500');
                 oldStopSensorStatus = stopSensor;
+                console.log(`Received stopsensor change (${value})`);
             }
-            console.log(`Received stopsensor change (${value})`);
         }
 
         // --- Event Handlers ---
