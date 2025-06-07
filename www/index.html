@@ -351,7 +351,7 @@
                     showMessage('No device selected or found.', 'info');
                     return;
                 }
-                
+
      console.log('---Device connected 1');
 
                 bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
@@ -362,7 +362,9 @@
     console.log('---Device connected 2');
                 // Get characteristics and start notifications
                 speedCharacteristic = await trainService.getCharacteristic(CHARACTERISTIC_UUID_SPEED);
+    console.log('---Device connected 2.1');
                 speedCharacteristic.addEventListener('characteristicvaluechanged', handleSpeedChanged);
+    console.log('---Device connected 2.1');
                 await speedCharacteristic.startNotifications();
                 console.log('- Speed characteristic notifications started.');
                 directionCharacteristic = await trainService.getCharacteristic(CHARACTERISTIC_UUID_DIRECTION);
