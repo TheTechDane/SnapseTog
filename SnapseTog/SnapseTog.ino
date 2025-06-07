@@ -140,7 +140,7 @@ class MyCharacteristicCallbacks: public BLECharacteristicCallbacks {
 
         if (pCharacteristic->getUUID().equals(BLEUUID(CHARACTERISTIC_UUID_SPEED))) {
           selectedSpeed = receivedValue;
-          selectedSpeed = round((float)selectedSpeed / 10.0) * 5;   //Increments of 5
+          selectedSpeed = round((float)selectedSpeed / 5.0) * 5;   //Increments of 5
           logI("Train Speed set to: ");
           loglnI(selectedSpeed);
           // TODO: Add your motor control logic here based on 'selectedSpeed'
@@ -370,6 +370,7 @@ void loop() {
 
   //Every secund update Train status to BLE connected device  
   if (deviceConnected && (currentMillis - prevBLEMillis  >= bLEIinterval) ) {
+    prevBLEMillis = currentMillis;
     int tempSpeed = selectedSpeed;
     pSpeedCharacteristic->setValue(tempSpeed); 
     pSpeedCharacteristic->notify(); 
@@ -383,7 +384,7 @@ void loop() {
     if (forwardStopDetected) tempstopSensor=1;
     if (reverseStopDetected) tempstopSensor+=2;
     pstopSensorCharacteristic->setValue(tempstopSensor); 
-    pLightsCharacteristic->notify(); 
+    pstopSensorCharacteristic->notify(); 
   }
 
   delay(50);

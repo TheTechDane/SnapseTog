@@ -202,9 +202,11 @@
         const toggleLightsButton = document.getElementById('toggleLightsButton');
 
         const currentDirectionSpan = document.getElementById('currentDirection'); // New UI element
-        const currentStopSpan = document.getElementById('currentStops'); // New UI element
+        const forwardStopIndicator = document.getElementById('forwardStopIndicator'); // New UI element
+        const backwardsStopIndicator = document.getElementById('backwardsStopIndicator'); // New UI element
 
         let lightsOn = false; // State for lights
+        let oldStopSensorStatus =0;
 
         // --- Helper Functions ---
 
@@ -329,7 +331,24 @@
         function handleStopSensorChanged(event) {
             const value = event.target.value.getUint8(0); // Read the first byte
             stopSensor = (value === 0);
-            console.log(`!!!Received stopsensor change (${value})`);
+
+            if (stopSensor != oldStopSensorStatus ) {
+                forwardStopIndicator.classList.remove('bg-green-500');
+                forwardStopIndicator.classList.remove('bg-red-500');
+                backwardsStopIndicator.classList.remove('bg-green-500');
+                backwardsStopIndicator.classList.remove('bg-red-500');
+
+                if (stopSensor == 1 && stopSensor == 3) 
+                    forwardStopIndicator.classList.add('bg-red-500');
+                else
+                    forwardStopIndicator.classList.add('bg-green-500');
+                if (stopSensor == 2 && stopSensor == 3) 
+                    backwardsStopIndicator.classList.add('bg-red-500');
+                else
+                    backwardsStopIndicator.classList.add('bg-green-500');
+                oldStopSensorStatus = stopSensor;
+            }
+            console.log(`Received stopsensor change (${value})`);
         }
 
         // --- Event Handlers ---
