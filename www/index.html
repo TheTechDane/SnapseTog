@@ -338,6 +338,7 @@
                 return;
             }
 
+            console.log('Device connected, scanning charasterictics...');
             try {
                 showMessage('Scanning for train...', 'info');
                 bluetoothDevice = await navigator.bluetooth.requestDevice({
@@ -350,28 +351,29 @@
                     showMessage('No device selected or found.', 'info');
                     return;
                 }
+                
+     console.log('---Device connected 1');
 
                 bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
                 showMessage(`Connecting to ${bluetoothDevice.name || 'Unknown Device'}...`, 'info');
                 const server = await bluetoothDevice.gatt.connect();
 
                 trainService = await server.getPrimaryService(SERVICE_UUID);
-
+    console.log('---Device connected 2');
                 // Get characteristics and start notifications
                 speedCharacteristic = await trainService.getCharacteristic(CHARACTERISTIC_UUID_SPEED);
                 speedCharacteristic.addEventListener('characteristicvaluechanged', handleSpeedChanged);
                 await speedCharacteristic.startNotifications();
-                console.log('Speed characteristic notifications started.');
-
+                console.log('- Speed characteristic notifications started.');
                 directionCharacteristic = await trainService.getCharacteristic(CHARACTERISTIC_UUID_DIRECTION);
                 directionCharacteristic.addEventListener('characteristicvaluechanged', handleDirectionChanged);
                 await directionCharacteristic.startNotifications();
-                console.log('Direction characteristic notifications started.');
+                console.log(' - Direction characteristic notifications started.');
 
                 lightsCharacteristic = await trainService.getCharacteristic(CHARACTERISTIC_UUID_LIGHTS);
                 lightsCharacteristic.addEventListener('characteristicvaluechanged', handleLightsChanged);
                 await lightsCharacteristic.startNotifications();
-                console.log('Lights characteristic notifications started.');
+                console.log(' - Lights characteristic notifications started.');
 
                 hornCharacteristic = await trainService.getCharacteristic(CHARACTERISTIC_UUID_HORN);
                 // Horn typically doesn't send notifications back

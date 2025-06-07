@@ -195,7 +195,8 @@ void setup() {
   pSpeedCharacteristic = pService->createCharacteristic(
                       CHARACTERISTIC_UUID_SPEED,
                       BLECharacteristic::PROPERTY_READ |
-                      BLECharacteristic::PROPERTY_WRITE
+                      BLECharacteristic::PROPERTY_WRITE|
+                      BLECharacteristic::PROPERTY_NOTIFY
                     );
   pSpeedCharacteristic->setCallbacks(new MyCharacteristicCallbacks());
   int tempSpeed = selectedSpeed;
@@ -204,7 +205,8 @@ void setup() {
   pDirectionCharacteristic = pService->createCharacteristic(
                       CHARACTERISTIC_UUID_DIRECTION,
                       BLECharacteristic::PROPERTY_READ |
-                      BLECharacteristic::PROPERTY_WRITE
+                      BLECharacteristic::PROPERTY_WRITE |
+                      BLECharacteristic::PROPERTY_NOTIFY
                     );
   pDirectionCharacteristic->setCallbacks(new MyCharacteristicCallbacks());
   int tempDirection = currentDirection;
@@ -213,7 +215,8 @@ void setup() {
   pLightsCharacteristic = pService->createCharacteristic(
                       CHARACTERISTIC_UUID_LIGHTS,
                       BLECharacteristic::PROPERTY_READ |
-                      BLECharacteristic::PROPERTY_WRITE
+                      BLECharacteristic::PROPERTY_WRITE |
+                      BLECharacteristic::PROPERTY_NOTIFY
                     );
   pLightsCharacteristic->setCallbacks(new MyCharacteristicCallbacks());
   int tempLights = currentLights;
