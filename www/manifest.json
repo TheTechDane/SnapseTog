@@ -1,5 +1,5 @@
 {
-    "name": "Snapsetoget",
+    "name": "Snapsetogs betjening",
     "short_name": "SnapseTog",
     "description": "Control your ESP32-powered toy train via Bluetooth Low Energy.",
     "start_url": "./",
