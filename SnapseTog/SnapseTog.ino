@@ -56,6 +56,8 @@ int previousDirection = REVERSE;
 int currentLights = ledON;             //0=Off, 1=On
 volatile int selectedSpeed = 150;   // 0-255 for PWM control
 bool isTrainMoving = false;
+bool forwardStopDetected = 0;
+bool reverseStopDetected = 0;
 
 // Speed control parameters
 #define speedStep 10 // Amount to change speed per encoder click
@@ -67,6 +69,45 @@ Encoder myEnc(encoderPinDT, encoderPinCLK);
 //Timer Variables, to avoid long Delays (blokking execution)
 unsigned long prevBLEMillis = 0; // Stores the last time the event happened
 const long bLEIinterval = 1000;      // Interval at which to run the code (in milliseconds, 1000ms = 1 second)
+
+//Train control Functions
+void moveForward() {
+  digitalWrite(motorIn1Pin, HIGH);
+  digitalWrite(motorIn2Pin, LOW);
+  setMotorSpeed(selectedSpeed);
+  currentDirection = FORWARD;
+  isTrainMoving = true;
+  logI("Moving forward at speed: ");
+  loglnI(selectedSpeed);
+}
+
+void moveReverse() {
+  digitalWrite(motorIn1Pin, LOW);
+  digitalWrite(motorIn2Pin, HIGH);
+  setMotorSpeed(selectedSpeed);
+  currentDirection = REVERSE;
+  isTrainMoving = true;
+  logI("Moving reverse at speed: ");
+  loglnI(selectedSpeed);
+}
+
+void stopMotor() {
+  digitalWrite(motorIn1Pin, LOW);
+  digitalWrite(motorIn2Pin, LOW);
+  setMotorSpeed(0);
+  previousDirection = currentDirection;
+  currentDirection = STOPPED;
+  isTrainMoving = false;
+  loglnI("Motor stopped.");
+}
+
+void setMotorSpeed(int speed) {
+  if (speed >= minSpeed && speed <= maxSpeed) {
+    analogWrite(motorEnablePin, speed);
+  } else {
+    loglnE("Invalid speed value.");
+  }
+}
 
 //Call backs for the BLE calls
 // Callback class for handling BLE server events (connections/disconnections)
@@ -99,7 +140,7 @@ class MyCharacteristicCallbacks: public BLECharacteristicCallbacks {
 
         if (pCharacteristic->getUUID().equals(BLEUUID(CHARACTERISTIC_UUID_SPEED))) {
           selectedSpeed = receivedValue;
-          selectedSpeed = round((float)selectedSpeed / 10.0) * 10;
+          selectedSpeed = round((float)selectedSpeed / 10.0) * 5;   //Increments of 5
           logI("Train Speed set to: ");
           loglnI(selectedSpeed);
           // TODO: Add your motor control logic here based on 'selectedSpeed'
@@ -108,9 +149,25 @@ class MyCharacteristicCallbacks: public BLECharacteristicCallbacks {
           currentDirection = receivedValue;
           Serial.print("Train Direction set to: ");
           switch (currentDirection) {
-            case 0: loglnI("STOP"); break;
-            case 1: loglnI("FORWARD"); break;
-            case 2: loglnI("BACKWARD"); break;
+            case 0: {
+              loglnI("BLE - STOP"); 
+              stopMotor();
+              break;
+            }
+            case 1: {
+              loglnI("BLE - FORWARD");
+              if (isTrainMoving) stopMotor();   //Stop it in motion
+              delay(500);
+              if (!forwardStopDetected) moveForward(); 
+              break;
+            }
+            case 2: {
+              loglnI("BLE - BACKWARD");
+              if (isTrainMoving) stopMotor();    //Stop if in motion
+              delay(500);
+              if (!reverseStopDetected) moveReverse();
+              break;
+            }
             default: loglnI("UNKNOWN"); break;
           }
           // TODO: Add your direction control logic here based on 'currentDirection'
@@ -120,12 +177,13 @@ class MyCharacteristicCallbacks: public BLECharacteristicCallbacks {
           // else { digitalWrite(dirPin1, LOW); digitalWrite(dirPin2, LOW); } // Stop
         } else if (pCharacteristic->getUUID().equals(BLEUUID(CHARACTERISTIC_UUID_LIGHTS))) {
           currentLights = receivedValue;
-          Serial.print("Train Lights set to: ");
-          if (currentLights == 1) {
+          loglnI("Train Lights blink");
+          blinkLight();
+          /*if (currentLights == 1) {
             loglnI("ON");
           } else {
             loglnI("OFF");
-          }
+          }*/
           // TODO: Add your lights control logic here based on 'currentLights'
           // Example: digitalWrite(lightPin, currentLights == 1 ? HIGH : LOW);
         } else if (pCharacteristic->getUUID().equals(BLEUUID(CHARACTERISTIC_UUID_STOPSENSOR))) {
@@ -135,15 +193,8 @@ class MyCharacteristicCallbacks: public BLECharacteristicCallbacks {
     }
 };
 
-/************************************************************ SETUP *********************************************************/
-void setup() {
-  Serial.begin(115200);
-  Serial.println("Current log level is :" + String(LOGLEVEL));
-
-  //Signal start on the LED
-  pinMode( front_red_led, OUTPUT);
-  pinMode( LED_BUILTIN, OUTPUT);
-  for (int i=0; i<3; i++) {
+void blinkLight() {
+    for (int i=0; i<3; i++) {
     digitalWrite(front_red_led, HIGH);  // turn the LED on (HIGH is the voltage level)
     digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
     delay(300);                      
@@ -154,6 +205,17 @@ void setup() {
   }
   digitalWrite(front_red_led, HIGH);  // turn the LED on (HIGH is the voltage level)
   digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
+}
+
+/************************************************************ SETUP *********************************************************/
+void setup() {
+  Serial.begin(115200);
+  Serial.println("Current log level is :" + String(LOGLEVEL));
+
+  //Signal start on the LED
+  pinMode( front_red_led, OUTPUT);
+  pinMode( LED_BUILTIN, OUTPUT);
+  blinkLight();
 
   //Get speed from Memory
   permData.begin("Train");
@@ -244,8 +306,8 @@ void setup() {
 }
 
 void loop() {
-  bool forwardStopDetected = digitalRead(forwardStopPin);
-  bool reverseStopDetected = digitalRead(reverseStopPin);
+  forwardStopDetected = digitalRead(forwardStopPin);
+  reverseStopDetected = digitalRead(reverseStopPin);
   bool startStopButtonPressed = !digitalRead(encoderButtonPin); // Assuming LOW when pressed
   unsigned long currentMillis = millis();    // for non blocking delays
     
@@ -318,47 +380,11 @@ void loop() {
     pLightsCharacteristic->setValue(tempLights); 
     pLightsCharacteristic->notify(); 
     int tempstopSensor = 0;
+    if (forwardStopDetected) tempstopSensor=1;
+    if (reverseStopDetected) tempstopSensor+=2;
     pstopSensorCharacteristic->setValue(tempstopSensor); 
     pLightsCharacteristic->notify(); 
   }
 
   delay(50);
-}
-
-void moveForward() {
-  digitalWrite(motorIn1Pin, HIGH);
-  digitalWrite(motorIn2Pin, LOW);
-  setMotorSpeed(selectedSpeed);
-  currentDirection = FORWARD;
-  isTrainMoving = true;
-  logI("Moving forward at speed: ");
-  loglnI(selectedSpeed);
-}
-
-void moveReverse() {
-  digitalWrite(motorIn1Pin, LOW);
-  digitalWrite(motorIn2Pin, HIGH);
-  setMotorSpeed(selectedSpeed);
-  currentDirection = REVERSE;
-  isTrainMoving = true;
-  logI("Moving reverse at speed: ");
-  loglnI(selectedSpeed);
-}
-
-void stopMotor() {
-  digitalWrite(motorIn1Pin, LOW);
-  digitalWrite(motorIn2Pin, LOW);
-  setMotorSpeed(0);
-  previousDirection = currentDirection;
-  currentDirection = STOPPED;
-  isTrainMoving = false;
-  loglnI("Motor stopped.");
-}
-
-void setMotorSpeed(int speed) {
-  if (speed >= minSpeed && speed <= maxSpeed) {
-    analogWrite(motorEnablePin, speed);
-  } else {
-    loglnE("Invalid speed value.");
-  }
 }

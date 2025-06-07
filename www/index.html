@@ -153,7 +153,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div class="control-group">
                 <h2 class="text-xl font-semibold mb-3 text-blue-600">Lys</h2>
-                <button id="toggleLightsButton" class="px-5 py-3 bg-gray-500 text-white font-semibold rounded-xl w-full hover:bg-gray-600 active:bg-gray-700">Skift Lys</button>
+                <button id="toggleLightsButton" class="px-5 py-3 bg-gray-500 text-white font-semibold rounded-xl w-full hover:bg-gray-600 active:bg-gray-700">Blink</button>
             </div>
         </div>
     </div>
@@ -317,8 +317,8 @@
          */
          function handleLightsChanged(event) {
             const value = event.target.value.getUint8(0); // Read the first byte
-            lightsOn = (value === 1);
-            toggleLightsButton.textContent = `Toggle Lights ${lightsOn ? 'ON' : 'OFF'}`;
+            //lightsOn = (value === 1);
+            //toggleLightsButton.textContent = `Toggle Lights ${lightsOn ? 'ON' : 'OFF'}`;
             console.log(`Received lights notification: ${lightsOn ? 'ON' : 'OFF'} (${value})`);
         } 
         
