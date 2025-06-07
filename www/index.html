@@ -119,6 +119,18 @@
         </div>
 
         <div class="control-group">
+            <h2 class="text-xl font-semibold mb-3 text-blue-600">Train Status</h2>
+            <div class="flex items-center justify-between text-lg font-medium mt-2">
+                <span>Current Direction:</span>
+                <span id="currentDirection" class="text-blue-600">Stop</span>
+            </div>            
+            <div class="flex items-center justify-between text-lg font-medium mt-2">
+                <span>Current Stops:</span>
+                <span id="currentStops" class="text-blue-600">None</span>
+            </div>
+        </div>
+
+        <div class="control-group">
             <h2 class="text-xl font-semibold mb-3 text-blue-600">Speed Control</h2>
             <input type="range" id="speedSlider" min="0" max="255" value="0" class="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer">
             <div class="flex justify-between text-sm mt-2">
@@ -138,20 +150,9 @@
                 <h2 class="text-xl font-semibold mb-3 text-blue-600">Lights</h2>
                 <button id="toggleLightsButton" class="px-5 py-3 bg-gray-500 text-white font-semibold rounded-xl w-full hover:bg-gray-600 active:bg-gray-700">Toggle Lights OFF</button>
             </div>
-
-            <div class="control-group">
-                <h2 class="text-xl font-semibold mb-3 text-blue-600">Horn</h2>
-                <button id="hornButton" class="px-5 py-3 bg-orange-500 text-white font-semibold rounded-xl w-full hover:bg-orange-600 active:bg-orange-700">Honk Horn</button>
-            </div>
         </div>
 
-        <div class="control-group">
-            <h2 class="text-xl font-semibold mb-3 text-blue-600">Train Status</h2>
-            <div class="flex items-center justify-between text-lg font-medium mt-2">
-                <span>Current Direction:</span>
-                <span id="currentDirection" class="text-blue-600">Stop</span>
-            </div>
-        </div>
+
     </div>
 
     <script>
@@ -173,7 +174,7 @@
         const CHARACTERISTIC_UUID_SPEED = 'beb5483e-36e1-4688-b7f5-ea07361b26a8';
         const CHARACTERISTIC_UUID_DIRECTION = 'a8a2d1d4-1f19-4b6e-b302-3c2c1a89c9c1';
         const CHARACTERISTIC_UUID_LIGHTS = 'e7e3f1c1-4b1a-4d3f-8c3b-7f2a1b9d4c7d';
-        const CHARACTERISTIC_UUID_HORN = 'f3d7c5b9-8e2b-4a5c-9d1a-6e3c2b1d4a8f';
+        const CHARACTERISTIC_UUID_STOPSENSOR = 'f3d7c5b9-8e2b-4a5c-9d1a-6e3c2b1d4a8f';
      
         // --- Global BLE Objects ---
         let bluetoothDevice;
@@ -181,7 +182,7 @@
         let speedCharacteristic;
         let directionCharacteristic;
         let lightsCharacteristic;
-        let hornCharacteristic;
+        let stopSensorCharacteristic;
 
         // --- UI Elements ---
         const connectButton = document.getElementById('connectButton');
@@ -196,9 +197,9 @@
         const backwardButton = document.getElementById('backwardButton');
 
         const toggleLightsButton = document.getElementById('toggleLightsButton');
-        const hornButton = document.getElementById('hornButton');
 
         const currentDirectionSpan = document.getElementById('currentDirection'); // New UI element
+        const currentStopSpan = document.getElementById('currentStops'); // New UI element
 
         let lightsOn = false; // State for lights
 
@@ -247,7 +248,7 @@
                 connectButton.classList.add('bg-blue-500', 'hover:bg-blue-600', 'active:bg-blue-700');
             }
             // Enable/disable controls based on connection
-            const controls = [speedSlider, stopButton, forwardButton, backwardButton, toggleLightsButton, hornButton];
+            const controls = [speedSlider, stopButton, forwardButton, backwardButton, toggleLightsButton, stopSensorButton];
             controls.forEach(control => {
                 control.disabled = !connected;
                 if (!connected) {
@@ -311,11 +312,21 @@
          * Handles notification for Lights characteristic changes.
          * @param {Event} event
          */
-        function handleLightsChanged(event) {
+         function handleLightsChanged(event) {
             const value = event.target.value.getUint8(0); // Read the first byte
             lightsOn = (value === 1);
             toggleLightsButton.textContent = `Toggle Lights ${lightsOn ? 'ON' : 'OFF'}`;
             console.log(`Received lights notification: ${lightsOn ? 'ON' : 'OFF'} (${value})`);
+        } 
+        
+        /**
+         * Handles notification for StopSensor characteristic changes.
+         * @param {Event} event
+         */
+        function handleStopSensorChanged(event) {
+            const value = event.target.value.getUint8(0); // Read the first byte
+            stopSensor = (value === 0);
+            console.log(`Received stopsensor change (${value})`);
         }
 
         // --- Event Handlers ---
@@ -338,7 +349,7 @@
                 return;
             }
 
-            console.log('Device connected, scanning charasterictics...');
+            console.log('Device found connecting...');
             try {
                 showMessage('Scanning for train...', 'info');
                 bluetoothDevice = await navigator.bluetooth.requestDevice({
@@ -352,19 +363,15 @@
                     return;
                 }
 
-     console.log('---Device connected 1');
-
+                console.log('Scanning charasterictics...');
                 bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
                 showMessage(`Connecting to ${bluetoothDevice.name || 'Unknown Device'}...`, 'info');
                 const server = await bluetoothDevice.gatt.connect();
 
                 trainService = await server.getPrimaryService(SERVICE_UUID);
-    console.log('---Device connected 2');
                 // Get characteristics and start notifications
                 speedCharacteristic = await trainService.getCharacteristic(CHARACTERISTIC_UUID_SPEED);
-    console.log('---Device connected 2.1');
                 speedCharacteristic.addEventListener('characteristicvaluechanged', handleSpeedChanged);
-    console.log('---Device connected 2.1');
                 await speedCharacteristic.startNotifications();
                 console.log('- Speed characteristic notifications started.');
                 directionCharacteristic = await trainService.getCharacteristic(CHARACTERISTIC_UUID_DIRECTION);
@@ -377,8 +384,10 @@
                 await lightsCharacteristic.startNotifications();
                 console.log(' - Lights characteristic notifications started.');
 
-                hornCharacteristic = await trainService.getCharacteristic(CHARACTERISTIC_UUID_HORN);
-                // Horn typically doesn't send notifications back
+                stopSensorCharacteristic = await trainService.getCharacteristic(CHARACTERISTIC_UUID_STOPSENSOR);
+                stopSensorCharacteristic.addEventListener('characteristicvaluechanged', handleStopSensorChanged);
+                await stopSensorCharacteristic.startNotifications();
+                console.log(' - StopSensor characteristic notifications started.');
 
                 updateConnectionStatus(true);
                 showMessage('Successfully connected to the train! Initializing display with current values...', 'info');
@@ -475,13 +484,13 @@
             showMessage(`Sending lights toggle command.`, 'info');
         });
 
-        // Horn Control
-        hornButton.addEventListener('click', () => {
+        // stopSensor Control
+        stopSensorButton.addEventListener('click', () => {
             if (bluetoothDevice && bluetoothDevice.gatt.connected) {
-                writeCharacteristic(hornCharacteristic, 1); // Send 1 to honk
+                writeCharacteristic(stopSensorCharacteristic, 1); // Send 1 to honk
                 // Note: ESP32 code should handle momentary honk and reset its internal state if needed.
             }
-            showMessage('Horn honked!', 'info');
+            showMessage('stopSensor honked!', 'info');
         });
 
         // Initialize UI state

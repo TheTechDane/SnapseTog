@@ -9,7 +9,8 @@
 #include <BLEDevice.h>
 #include <BLEUtils.h>
 #include <BLEServer.h>
-#include <BLECharacteristic.h>
+#include <BLE2902.h> // For BLEDescriptor
+//#include <BLECharacteristic.h>
 
 // Define the UUIDs for our BLE Service and Characteristics.
 // You can generate new UUIDs using an online UUID generator if needed.
@@ -18,13 +19,13 @@
 #define CHARACTERISTIC_UUID_SPEED     "beb5483e-36e1-4688-b7f5-ea07361b26a8" // Speed (0-255)
 #define CHARACTERISTIC_UUID_DIRECTION "a8a2d1d4-1f19-4b6e-b302-3c2c1a89c9c1" // Direction (0=Stop, 1=Forward, 2=Backward)
 #define CHARACTERISTIC_UUID_LIGHTS    "e7e3f1c1-4b1a-4d3f-8c3b-7f2a1b9d4c7d" // Lights (0=Off, 1=On)
-#define CHARACTERISTIC_UUID_HORN      "f3d7c5b9-8e2b-4a5c-9d1a-6e3c2b1d4a8f" // Horn (0=Off, 1=Honk)
+#define CHARACTERISTIC_UUID_STOPSENSOR      "f3d7c5b9-8e2b-4a5c-9d1a-6e3c2b1d4a8f" // Stop Sensor (0=no stop, 1=Forward stop, 2=Backward stop)
 
 BLEServer* pServer = NULL;
 BLECharacteristic* pSpeedCharacteristic = NULL;
 BLECharacteristic* pDirectionCharacteristic = NULL;
 BLECharacteristic* pLightsCharacteristic = NULL;
-BLECharacteristic* pHornCharacteristic = NULL;
+BLECharacteristic* pstopSensorCharacteristic = NULL;
 
 #define motorEnablePin D0    //GPIO0; // PWM pin for speed control
 #define motorIn1Pin D1       //GPIO1;
@@ -98,7 +99,8 @@ class MyCharacteristicCallbacks: public BLECharacteristicCallbacks {
 
         if (pCharacteristic->getUUID().equals(BLEUUID(CHARACTERISTIC_UUID_SPEED))) {
           selectedSpeed = receivedValue;
-          Serial.print("Train Speed set to: ");
+          selectedSpeed = round((float)selectedSpeed / 10.0) * 10;
+          logI("Train Speed set to: ");
           loglnI(selectedSpeed);
           // TODO: Add your motor control logic here based on 'selectedSpeed'
           // Example: analogWrite(motorPin, selectedSpeed);
@@ -126,14 +128,8 @@ class MyCharacteristicCallbacks: public BLECharacteristicCallbacks {
           }
           // TODO: Add your lights control logic here based on 'currentLights'
           // Example: digitalWrite(lightPin, currentLights == 1 ? HIGH : LOW);
-        } else if (pCharacteristic->getUUID().equals(BLEUUID(CHARACTERISTIC_UUID_HORN))) {
-          // Horn is typically a momentary action, so we just trigger it and reset.
-          if (receivedValue == 1) {
-            loglnI("Horn activated!");
-            // TODO: Add your horn activation logic here (e.g., play a sound, momentary high output to a buzzer)
-            // It might be good to reset the horn characteristic value back to 0 after a short delay
-            // or expect the PWA to send 0 after triggering the horn.
-          }
+        } else if (pCharacteristic->getUUID().equals(BLEUUID(CHARACTERISTIC_UUID_STOPSENSOR))) {
+          // Should never get here         
         }
       }
     }
@@ -201,6 +197,7 @@ void setup() {
   pSpeedCharacteristic->setCallbacks(new MyCharacteristicCallbacks());
   int tempSpeed = selectedSpeed;
   pSpeedCharacteristic->setValue(tempSpeed); // Set initial value
+  pSpeedCharacteristic->addDescriptor(new BLE2902()); // Add CCCD for notifications
 
   pDirectionCharacteristic = pService->createCharacteristic(
                       CHARACTERISTIC_UUID_DIRECTION,
@@ -211,6 +208,7 @@ void setup() {
   pDirectionCharacteristic->setCallbacks(new MyCharacteristicCallbacks());
   int tempDirection = currentDirection;
   pDirectionCharacteristic->setValue(tempDirection); // Set initial value
+  pDirectionCharacteristic->addDescriptor(new BLE2902()); // Add CCCD for notifications
 
   pLightsCharacteristic = pService->createCharacteristic(
                       CHARACTERISTIC_UUID_LIGHTS,
@@ -221,14 +219,18 @@ void setup() {
   pLightsCharacteristic->setCallbacks(new MyCharacteristicCallbacks());
   int tempLights = currentLights;
   pLightsCharacteristic->setValue(tempLights); // Set initial value
+  pLightsCharacteristic->addDescriptor(new BLE2902()); // Add CCCD for notifications
 
-  pHornCharacteristic = pService->createCharacteristic(
-                      CHARACTERISTIC_UUID_HORN,
-                      BLECharacteristic::PROPERTY_WRITE // Horn is write-only
+  pstopSensorCharacteristic = pService->createCharacteristic(
+                      CHARACTERISTIC_UUID_STOPSENSOR,
+                      BLECharacteristic::PROPERTY_READ |
+                      BLECharacteristic::PROPERTY_WRITE |
+                      BLECharacteristic::PROPERTY_NOTIFY
                     );
-  pHornCharacteristic->setCallbacks(new MyCharacteristicCallbacks());
-  int tempHorn = 0;
-  pHornCharacteristic->setValue(tempHorn); // Initial horn state is off
+  pstopSensorCharacteristic->setCallbacks(new MyCharacteristicCallbacks());
+  int tempstopSensor = 0;
+  pstopSensorCharacteristic->setValue(tempstopSensor); // Initial stopSensor state is off
+  pstopSensorCharacteristic->addDescriptor(new BLE2902()); // Add CCCD for notifications
 
   // Start the service
   pService->start();
@@ -307,14 +309,17 @@ void loop() {
   //Every secund update Train status to BLE connected device  
   if (deviceConnected && (currentMillis - prevBLEMillis  >= bLEIinterval) ) {
     int tempSpeed = selectedSpeed;
-    pSpeedCharacteristic->setValue(tempSpeed); // Set initial value
-    pSpeedCharacteristic->notify(); // Set initial value
+    pSpeedCharacteristic->setValue(tempSpeed); 
+    pSpeedCharacteristic->notify(); 
     int tempDirection = currentDirection;
-    pDirectionCharacteristic->setValue(tempDirection); // Set initial value
+    pDirectionCharacteristic->setValue(tempDirection); 
     pDirectionCharacteristic->notify();
     int tempLights = currentLights;
-    pLightsCharacteristic->setValue(tempLights); // Set initial value
-    pLightsCharacteristic->notify(); // Notify connected client if configured with NOTIFY property
+    pLightsCharacteristic->setValue(tempLights); 
+    pLightsCharacteristic->notify(); 
+    int tempstopSensor = 0;
+    pstopSensorCharacteristic->setValue(tempstopSensor); 
+    pLightsCharacteristic->notify(); 
   }
 
   delay(50);
