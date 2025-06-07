@@ -105,10 +105,10 @@
         <h1 class="text-3xl font-bold text-center text-blue-700 mb-4">🚂 Snapsetoget</h1>
 
         <div class="control-group">
-            <h2 class="text-xl font-semibold mb-3 text-blue-600">Connection</h2>
+            <h2 class="text-xl font-semibold mb-3 text-blue-600">Forbindelse</h2>
             <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
                 <button id="connectButton" class="px-6 py-3 bg-blue-500 text-white font-semibold rounded-xl w-full sm:w-auto hover:bg-blue-600 active:bg-blue-700">
-                    Connect to Train
+                    Forbind tog
                 </button>
                 <div id="connectionStatus" class="text-sm font-medium text-gray-600 flex items-center">
                     <span class="inline-block w-3 h-3 rounded-full mr-2 bg-red-500" id="statusIndicator"></span>
@@ -119,19 +119,24 @@
         </div>
 
         <div class="control-group">
-            <h2 class="text-xl font-semibold mb-3 text-blue-600">Train Status</h2>
+            <h2 class="text-xl font-semibold mb-3 text-blue-600">Status</h2>
             <div class="flex items-center justify-between text-lg font-medium mt-2">
-                <span>Current Direction:</span>
+                <span>Retning:</span>
                 <span id="currentDirection" class="text-blue-600">Stop</span>
             </div>            
             <div class="flex items-center justify-between text-lg font-medium mt-2">
-                <span>Current Stops:</span>
-                <span id="currentStops" class="text-blue-600">None</span>
+                <span>Skinne stop:</span>
+                <div id="connectionStatus" class="text-gray-600 flex items-center">
+                    <span class="inline-block w-3 h-3 rounded-full mr-2 bg-green-500" id="forwardStopIndicator"></span>
+                    <span id="fwStopText" class="text-blue-600">Frem&nbsp;</span>
+                    <span class="inline-block w-3 h-3 rounded-full mr-2 bg-green-500" id="backwardsStopIndicator"></span>
+                    <span id="bckStopsText" class="text-blue-600">Bak</span>                    
+                </div>
             </div>
         </div>
 
         <div class="control-group">
-            <h2 class="text-xl font-semibold mb-3 text-blue-600">Speed Control</h2>
+            <h2 class="text-xl font-semibold mb-3 text-blue-600">Fart kontrol</h2>
             <input type="range" id="speedSlider" min="0" max="255" value="0" class="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer">
             <div class="flex justify-between text-sm mt-2">
                 <span>0</span>
@@ -140,19 +145,17 @@
             </div>
             <div class="mt-4 flex flex-wrap justify-center gap-3">
                 <button id="stopButton" class="px-5 py-2 bg-red-500 text-white font-semibold rounded-xl hover:bg-red-600 active:bg-red-700 flex-grow">Stop</button>
-                <button id="forwardButton" class="px-5 py-2 bg-green-500 text-white font-semibold rounded-xl hover:bg-green-600 active:bg-green-700 flex-grow">Forward</button>
-                <button id="backwardButton" class="px-5 py-2 bg-yellow-500 text-white font-semibold rounded-xl hover:bg-yellow-600 active:bg-yellow-700 flex-grow">Backward</button>
+                <button id="forwardButton" class="px-5 py-2 bg-green-500 text-white font-semibold rounded-xl hover:bg-green-600 active:bg-green-700 flex-grow">Frem</button>
+                <button id="backwardButton" class="px-5 py-2 bg-yellow-500 text-white font-semibold rounded-xl hover:bg-yellow-600 active:bg-yellow-700 flex-grow">Tilbage</button>
             </div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div class="control-group">
-                <h2 class="text-xl font-semibold mb-3 text-blue-600">Lights</h2>
-                <button id="toggleLightsButton" class="px-5 py-3 bg-gray-500 text-white font-semibold rounded-xl w-full hover:bg-gray-600 active:bg-gray-700">Toggle Lights OFF</button>
+                <h2 class="text-xl font-semibold mb-3 text-blue-600">Lys</h2>
+                <button id="toggleLightsButton" class="px-5 py-3 bg-gray-500 text-white font-semibold rounded-xl w-full hover:bg-gray-600 active:bg-gray-700">Skift Lys</button>
             </div>
         </div>
-
-
     </div>
 
     <script>
@@ -248,7 +251,7 @@
                 connectButton.classList.add('bg-blue-500', 'hover:bg-blue-600', 'active:bg-blue-700');
             }
             // Enable/disable controls based on connection
-            const controls = [speedSlider, stopButton, forwardButton, backwardButton, toggleLightsButton, stopSensorButton];
+            const controls = [speedSlider, stopButton, forwardButton, backwardButton, toggleLightsButton];
             controls.forEach(control => {
                 control.disabled = !connected;
                 if (!connected) {
@@ -301,8 +304,8 @@
             let directionText = "Unknown";
             switch (value) {
                 case 0: directionText = "Stop"; break;
-                case 1: directionText = "Forward"; break;
-                case 2: directionText = "Backward"; break;
+                case 1: directionText = "Fremad"; break;
+                case 2: directionText = "Baglæns"; break;
             }
             currentDirectionSpan.textContent = directionText;
             console.log(`Received direction notification: ${directionText} (${value})`);
