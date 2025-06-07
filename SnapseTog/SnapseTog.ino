@@ -312,8 +312,6 @@ void loop() {
     int tempLights = currentLights;
     pLightsCharacteristic->setValue(tempLights); // Set initial value
     pLightsCharacteristic->notify(); // Notify connected client if configured with NOTIFY property
-
-    loglnI("BLE device updated");
   }
 
   delay(50);

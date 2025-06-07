@@ -147,10 +147,6 @@
 
         <div class="control-group">
             <h2 class="text-xl font-semibold mb-3 text-blue-600">Train Status</h2>
-            <div class="flex items-center justify-between text-lg font-medium">
-                <span>Battery Level:</span>
-                <span id="batteryLevel" class="text-green-600">--%</span>
-            </div>
             <div class="flex items-center justify-between text-lg font-medium mt-2">
                 <span>Current Direction:</span>
                 <span id="currentDirection" class="text-blue-600">Stop</span>
@@ -178,8 +174,7 @@
         const CHARACTERISTIC_UUID_DIRECTION = 'a8a2d1d4-1f19-4b6e-b302-3c2c1a89c9c1';
         const CHARACTERISTIC_UUID_LIGHTS = 'e7e3f1c1-4b1a-4d3f-8c3b-7f2a1b9d4c7d';
         const CHARACTERISTIC_UUID_HORN = 'f3d7c5b9-8e2b-4a5c-9d1a-6e3c2b1d4a8f';
-        const CHARACTERISTIC_UUID_BATTERY = '1a2b3c4d-5e6f-7080-90a0-b0c0d0e0f0a1'; // New Battery UUID
-
+     
         // --- Global BLE Objects ---
         let bluetoothDevice;
         let trainService;
@@ -187,7 +182,6 @@
         let directionCharacteristic;
         let lightsCharacteristic;
         let hornCharacteristic;
-        let batteryCharacteristic; // New battery characteristic object
 
         // --- UI Elements ---
         const connectButton = document.getElementById('connectButton');
@@ -204,7 +198,6 @@
         const toggleLightsButton = document.getElementById('toggleLightsButton');
         const hornButton = document.getElementById('hornButton');
 
-        const batteryLevelSpan = document.getElementById('batteryLevel'); // New UI element
         const currentDirectionSpan = document.getElementById('currentDirection'); // New UI element
 
         let lightsOn = false; // State for lights
@@ -325,28 +318,6 @@
             console.log(`Received lights notification: ${lightsOn ? 'ON' : 'OFF'} (${value})`);
         }
 
-        /**
-         * Handles notification for Battery Level characteristic changes.
-         * @param {Event} event
-         */
-        function handleBatteryLevelChanged(event) {
-            const value = event.target.value.getUint8(0); // Read the first byte
-            batteryLevelSpan.textContent = `${value}%`;
-            console.log(`Received battery level notification: ${value}%`);
-            // Optionally change color based on level
-            if (value < 20) {
-                batteryLevelSpan.classList.remove('text-green-600', 'text-yellow-600');
-                batteryLevelSpan.classList.add('text-red-600');
-            } else if (value < 50) {
-                batteryLevelSpan.classList.remove('text-green-600', 'text-red-600');
-                batteryLevelSpan.classList.add('text-yellow-600');
-            } else {
-                batteryLevelSpan.classList.remove('text-red-600', 'text-yellow-600');
-                batteryLevelSpan.classList.add('text-green-600');
-            }
-        }
-
-
         // --- Event Handlers ---
 
         /**
@@ -405,12 +376,6 @@
                 hornCharacteristic = await trainService.getCharacteristic(CHARACTERISTIC_UUID_HORN);
                 // Horn typically doesn't send notifications back
 
-                batteryCharacteristic = await trainService.getCharacteristic(CHARACTERISTIC_UUID_BATTERY);
-                batteryCharacteristic.addEventListener('characteristicvaluechanged', handleBatteryLevelChanged);
-                await batteryCharacteristic.startNotifications();
-                console.log('Battery characteristic notifications started.');
-
-
                 updateConnectionStatus(true);
                 showMessage('Successfully connected to the train! Initializing display with current values...', 'info');
                 console.log('Connected to train and characteristics obtained.');
@@ -434,11 +399,6 @@
                 // lightsOn = (initialLightsValue === 1);
                 // toggleLightsButton.textContent = `Toggle Lights ${lightsOn ? 'ON' : 'OFF'}`;
 
-                // const initialBatteryLevelValue = (await batteryCharacteristic.readValue()).getUint8(0);
-                // batteryLevelSpan.textContent = `${initialBatteryLevelValue}%`;
-                // // Call the update function to set color based on initial level
-                // handleBatteryLevelChanged({ target: { value: new DataView(new Uint8Array([initialBatteryLevelValue]).buffer) } });
-
 
             } catch (error) {
                 showMessage(`Connection error: ${error.message}. Make sure the ESP32 is powered on and advertising.`, 'error');
@@ -461,10 +421,7 @@
             speedValueSpan.textContent = 0;
             lightsOn = false;
             toggleLightsButton.textContent = 'Toggle Lights OFF';
-            batteryLevelSpan.textContent = '--%';
             currentDirectionSpan.textContent = 'Stop';
-            batteryLevelSpan.classList.remove('text-red-600', 'text-yellow-600');
-            batteryLevelSpan.classList.add('text-green-600'); // Reset to default green
         }
 
         // Speed Control
