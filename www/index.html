@@ -329,7 +329,7 @@
         function handleStopSensorChanged(event) {
             const value = event.target.value.getUint8(0); // Read the first byte
             stopSensor = (value === 0);
-            console.log(`Received stopsensor change (${value})`);
+            console.log(`!!!Received stopsensor change (${value})`);
         }
 
         // --- Event Handlers ---
