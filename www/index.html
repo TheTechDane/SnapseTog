@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Snapsetogs betjening</title>
+    <title>Snapsetog betjening</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="manifest" href="manifest.json">
@@ -144,6 +144,18 @@
                 <button id="hornButton" class="px-5 py-3 bg-orange-500 text-white font-semibold rounded-xl w-full hover:bg-orange-600 active:bg-orange-700">Honk Horn</button>
             </div>
         </div>
+
+        <div class="control-group">
+            <h2 class="text-xl font-semibold mb-3 text-blue-600">Train Status</h2>
+            <div class="flex items-center justify-between text-lg font-medium">
+                <span>Battery Level:</span>
+                <span id="batteryLevel" class="text-green-600">--%</span>
+            </div>
+            <div class="flex items-center justify-between text-lg font-medium mt-2">
+                <span>Current Direction:</span>
+                <span id="currentDirection" class="text-blue-600">Stop</span>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -166,6 +178,7 @@
         const CHARACTERISTIC_UUID_DIRECTION = 'a8a2d1d4-1f19-4b6e-b302-3c2c1a89c9c1';
         const CHARACTERISTIC_UUID_LIGHTS = 'e7e3f1c1-4b1a-4d3f-8c3b-7f2a1b9d4c7d';
         const CHARACTERISTIC_UUID_HORN = 'f3d7c5b9-8e2b-4a5c-9d1a-6e3c2b1d4a8f';
+        const CHARACTERISTIC_UUID_BATTERY = '1a2b3c4d-5e6f-7080-90a0-b0c0d0e0f0a1'; // New Battery UUID
 
         // --- Global BLE Objects ---
         let bluetoothDevice;
@@ -174,6 +187,7 @@
         let directionCharacteristic;
         let lightsCharacteristic;
         let hornCharacteristic;
+        let batteryCharacteristic; // New battery characteristic object
 
         // --- UI Elements ---
         const connectButton = document.getElementById('connectButton');
@@ -190,6 +204,9 @@
         const toggleLightsButton = document.getElementById('toggleLightsButton');
         const hornButton = document.getElementById('hornButton');
 
+        const batteryLevelSpan = document.getElementById('batteryLevel'); // New UI element
+        const currentDirectionSpan = document.getElementById('currentDirection'); // New UI element
+
         let lightsOn = false; // State for lights
 
         // --- Helper Functions ---
@@ -197,7 +214,7 @@
         /**
          * Displays a message in the message box.
          * @param {string} message The message to display.
-         * @param {string} type Optional. 'error' for error messages (red).
+         * @param {string} type Optional. 'error' for error messages (red), 'info' for info (yellow).
          */
         function showMessage(message, type = 'info') {
             messageBox.textContent = message;
@@ -212,7 +229,6 @@
             if (type !== 'error') {
                 setTimeout(() => {
                     messageBox.classList.remove('show');
-                    // messageBox.classList.add('hidden'); // Re-hide after fading
                 }, 5000);
             }
         }
@@ -269,6 +285,68 @@
             }
         }
 
+        // --- Notification Handlers ---
+
+        /**
+         * Handles notification for Speed characteristic changes.
+         * @param {Event} event
+         */
+        function handleSpeedChanged(event) {
+            const value = event.target.value.getUint8(0); // Read the first byte
+            speedSlider.value = value;
+            speedValueSpan.textContent = value;
+            console.log(`Received speed notification: ${value}`);
+        }
+
+        /**
+         * Handles notification for Direction characteristic changes.
+         * @param {Event} event
+         */
+        function handleDirectionChanged(event) {
+            const value = event.target.value.getUint8(0); // Read the first byte
+            let directionText = "Unknown";
+            switch (value) {
+                case 0: directionText = "Stop"; break;
+                case 1: directionText = "Forward"; break;
+                case 2: directionText = "Backward"; break;
+            }
+            currentDirectionSpan.textContent = directionText;
+            console.log(`Received direction notification: ${directionText} (${value})`);
+        }
+
+        /**
+         * Handles notification for Lights characteristic changes.
+         * @param {Event} event
+         */
+        function handleLightsChanged(event) {
+            const value = event.target.value.getUint8(0); // Read the first byte
+            lightsOn = (value === 1);
+            toggleLightsButton.textContent = `Toggle Lights ${lightsOn ? 'ON' : 'OFF'}`;
+            console.log(`Received lights notification: ${lightsOn ? 'ON' : 'OFF'} (${value})`);
+        }
+
+        /**
+         * Handles notification for Battery Level characteristic changes.
+         * @param {Event} event
+         */
+        function handleBatteryLevelChanged(event) {
+            const value = event.target.value.getUint8(0); // Read the first byte
+            batteryLevelSpan.textContent = `${value}%`;
+            console.log(`Received battery level notification: ${value}%`);
+            // Optionally change color based on level
+            if (value < 20) {
+                batteryLevelSpan.classList.remove('text-green-600', 'text-yellow-600');
+                batteryLevelSpan.classList.add('text-red-600');
+            } else if (value < 50) {
+                batteryLevelSpan.classList.remove('text-green-600', 'text-red-600');
+                batteryLevelSpan.classList.add('text-yellow-600');
+            } else {
+                batteryLevelSpan.classList.remove('text-red-600', 'text-yellow-600');
+                batteryLevelSpan.classList.add('text-green-600');
+            }
+        }
+
+
         // --- Event Handlers ---
 
         /**
@@ -307,22 +385,60 @@
                 const server = await bluetoothDevice.gatt.connect();
 
                 trainService = await server.getPrimaryService(SERVICE_UUID);
+
+                // Get characteristics and start notifications
                 speedCharacteristic = await trainService.getCharacteristic(CHARACTERISTIC_UUID_SPEED);
+                speedCharacteristic.addEventListener('characteristicvaluechanged', handleSpeedChanged);
+                await speedCharacteristic.startNotifications();
+                console.log('Speed characteristic notifications started.');
+
                 directionCharacteristic = await trainService.getCharacteristic(CHARACTERISTIC_UUID_DIRECTION);
+                directionCharacteristic.addEventListener('characteristicvaluechanged', handleDirectionChanged);
+                await directionCharacteristic.startNotifications();
+                console.log('Direction characteristic notifications started.');
+
                 lightsCharacteristic = await trainService.getCharacteristic(CHARACTERISTIC_UUID_LIGHTS);
+                lightsCharacteristic.addEventListener('characteristicvaluechanged', handleLightsChanged);
+                await lightsCharacteristic.startNotifications();
+                console.log('Lights characteristic notifications started.');
+
                 hornCharacteristic = await trainService.getCharacteristic(CHARACTERISTIC_UUID_HORN);
+                // Horn typically doesn't send notifications back
+
+                batteryCharacteristic = await trainService.getCharacteristic(CHARACTERISTIC_UUID_BATTERY);
+                batteryCharacteristic.addEventListener('characteristicvaluechanged', handleBatteryLevelChanged);
+                await batteryCharacteristic.startNotifications();
+                console.log('Battery characteristic notifications started.');
+
 
                 updateConnectionStatus(true);
-                showMessage('Successfully connected to the train!', 'info');
+                showMessage('Successfully connected to the train! Initializing display with current values...', 'info');
                 console.log('Connected to train and characteristics obtained.');
 
-                // Initialize UI with current values from ESP32 if available (optional read)
-                const initialSpeed = await speedCharacteristic.readValue();
-                speedSlider.value = new Uint8Array(initialSpeed.buffer)[0];
-                speedValueSpan.textContent = speedSlider.value;
-                const initialLights = await lightsCharacteristic.readValue();
-                lightsOn = (new Uint8Array(initialLights.buffer)[0] === 1);
-                toggleLightsButton.textContent = `Toggle Lights ${lightsOn ? 'ON' : 'OFF'}`;
+                // Initial read for current state (optional, as notifications should quickly update)
+                // This is useful if the ESP32 doesn't immediately send a notification upon connection
+                // const initialSpeedValue = (await speedCharacteristic.readValue()).getUint8(0);
+                // speedSlider.value = initialSpeedValue;
+                // speedValueSpan.textContent = initialSpeedValue;
+
+                // const initialDirectionValue = (await directionCharacteristic.readValue()).getUint8(0);
+                // let initialDirectionText = "Stop";
+                // switch (initialDirectionValue) {
+                //     case 0: initialDirectionText = "Stop"; break;
+                //     case 1: initialDirectionText = "Forward"; break;
+                //     case 2: initialDirectionText = "Backward"; break;
+                // }
+                // currentDirectionSpan.textContent = initialDirectionText;
+
+                // const initialLightsValue = (await lightsCharacteristic.readValue()).getUint8(0);
+                // lightsOn = (initialLightsValue === 1);
+                // toggleLightsButton.textContent = `Toggle Lights ${lightsOn ? 'ON' : 'OFF'}`;
+
+                // const initialBatteryLevelValue = (await batteryCharacteristic.readValue()).getUint8(0);
+                // batteryLevelSpan.textContent = `${initialBatteryLevelValue}%`;
+                // // Call the update function to set color based on initial level
+                // handleBatteryLevelChanged({ target: { value: new DataView(new Uint8Array([initialBatteryLevelValue]).buffer) } });
+
 
             } catch (error) {
                 showMessage(`Connection error: ${error.message}. Make sure the ESP32 is powered on and advertising.`, 'error');
@@ -340,20 +456,27 @@
             showMessage(`${device.name || 'Device'} disconnected.`, 'info');
             console.log(`${device.name || 'Device'} disconnected.`);
             updateConnectionStatus(false);
+            // Also reset UI elements to default disconnected state
+            speedSlider.value = 0;
+            speedValueSpan.textContent = 0;
+            lightsOn = false;
+            toggleLightsButton.textContent = 'Toggle Lights OFF';
+            batteryLevelSpan.textContent = '--%';
+            currentDirectionSpan.textContent = 'Stop';
+            batteryLevelSpan.classList.remove('text-red-600', 'text-yellow-600');
+            batteryLevelSpan.classList.add('text-green-600'); // Reset to default green
         }
 
         // Speed Control
         speedSlider.addEventListener('input', () => {
             const speed = parseInt(speedSlider.value, 10);
-            speedValueSpan.textContent = speed;
+            // The UI will be updated by the notification from ESP32 after write.
             if (bluetoothDevice && bluetoothDevice.gatt.connected) {
                 writeCharacteristic(speedCharacteristic, speed);
             }
         });
 
         stopButton.addEventListener('click', () => {
-            speedSlider.value = 0;
-            speedValueSpan.textContent = 0;
             if (bluetoothDevice && bluetoothDevice.gatt.connected) {
                 writeCharacteristic(speedCharacteristic, 0); // Set speed to 0
                 writeCharacteristic(directionCharacteristic, 0); // Set direction to STOP
@@ -365,8 +488,6 @@
             if (bluetoothDevice && bluetoothDevice.gatt.connected) {
                 writeCharacteristic(directionCharacteristic, 1); // Set direction to FORWARD
                 if (parseInt(speedSlider.value, 10) === 0) { // If speed is 0, set a default
-                    speedSlider.value = 100;
-                    speedValueSpan.textContent = 100;
                     writeCharacteristic(speedCharacteristic, 100);
                 }
             }
@@ -377,8 +498,6 @@
             if (bluetoothDevice && bluetoothDevice.gatt.connected) {
                 writeCharacteristic(directionCharacteristic, 2); // Set direction to BACKWARD
                 if (parseInt(speedSlider.value, 10) === 0) { // If speed is 0, set a default
-                    speedSlider.value = 100;
-                    speedValueSpan.textContent = 100;
                     writeCharacteristic(speedCharacteristic, 100);
                 }
             }
@@ -387,13 +506,12 @@
 
         // Lights Control
         toggleLightsButton.addEventListener('click', () => {
-            lightsOn = !lightsOn;
-            const lightValue = lightsOn ? 1 : 0;
+            const lightValue = lightsOn ? 0 : 1; // Toggle logic based on current state
             if (bluetoothDevice && bluetoothDevice.gatt.connected) {
                 writeCharacteristic(lightsCharacteristic, lightValue);
             }
-            toggleLightsButton.textContent = `Toggle Lights ${lightsOn ? 'ON' : 'OFF'}`;
-            showMessage(`Lights turned ${lightsOn ? 'ON' : 'OFF'}.`, 'info');
+            // UI will be updated by notification from ESP32.
+            showMessage(`Sending lights toggle command.`, 'info');
         });
 
         // Horn Control

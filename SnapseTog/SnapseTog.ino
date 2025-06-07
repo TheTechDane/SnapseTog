@@ -72,13 +72,13 @@ const long bLEIinterval = 1000;      // Interval at which to run the code (in mi
 class MyServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* pServer) {
       deviceConnected = true;
-      Serial.println("Client connected!");
+      loglnI("Client connected!");
       // You can add logic here to indicate connection status, e.g., turn on an LED.
     };
 
     void onDisconnect(BLEServer* pServer) {
       deviceConnected = false;
-      Serial.println("Client disconnected. Starting advertising again...");
+      loglnI("Client disconnected. Starting advertising again...");
       BLEDevice::startAdvertising(); // Restart advertising to allow new connections
       // You can add logic here to indicate disconnection status, e.g., turn off an LED.
     }
@@ -94,22 +94,22 @@ class MyCharacteristicCallbacks: public BLECharacteristicCallbacks {
         Serial.print(pCharacteristic->getUUID().toString().c_str());
         Serial.print(" received: ");
         uint8_t receivedValue = (uint8_t)value[0];
-        Serial.println(receivedValue);
+        loglnI(receivedValue);
 
         if (pCharacteristic->getUUID().equals(BLEUUID(CHARACTERISTIC_UUID_SPEED))) {
           selectedSpeed = receivedValue;
           Serial.print("Train Speed set to: ");
-          Serial.println(selectedSpeed);
+          loglnI(selectedSpeed);
           // TODO: Add your motor control logic here based on 'selectedSpeed'
           // Example: analogWrite(motorPin, selectedSpeed);
         } else if (pCharacteristic->getUUID().equals(BLEUUID(CHARACTERISTIC_UUID_DIRECTION))) {
           currentDirection = receivedValue;
           Serial.print("Train Direction set to: ");
           switch (currentDirection) {
-            case 0: Serial.println("STOP"); break;
-            case 1: Serial.println("FORWARD"); break;
-            case 2: Serial.println("BACKWARD"); break;
-            default: Serial.println("UNKNOWN"); break;
+            case 0: loglnI("STOP"); break;
+            case 1: loglnI("FORWARD"); break;
+            case 2: loglnI("BACKWARD"); break;
+            default: loglnI("UNKNOWN"); break;
           }
           // TODO: Add your direction control logic here based on 'currentDirection'
           // Example:
@@ -120,16 +120,16 @@ class MyCharacteristicCallbacks: public BLECharacteristicCallbacks {
           currentLights = receivedValue;
           Serial.print("Train Lights set to: ");
           if (currentLights == 1) {
-            Serial.println("ON");
+            loglnI("ON");
           } else {
-            Serial.println("OFF");
+            loglnI("OFF");
           }
           // TODO: Add your lights control logic here based on 'currentLights'
           // Example: digitalWrite(lightPin, currentLights == 1 ? HIGH : LOW);
         } else if (pCharacteristic->getUUID().equals(BLEUUID(CHARACTERISTIC_UUID_HORN))) {
           // Horn is typically a momentary action, so we just trigger it and reset.
           if (receivedValue == 1) {
-            Serial.println("Horn activated!");
+            loglnI("Horn activated!");
             // TODO: Add your horn activation logic here (e.g., play a sound, momentary high output to a buzzer)
             // It might be good to reset the horn characteristic value back to 0 after a short delay
             // or expect the PWA to send 0 after triggering the horn.
@@ -151,7 +151,7 @@ void setup() {
     digitalWrite(front_red_led, HIGH);  // turn the LED on (HIGH is the voltage level)
     digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
     delay(300);                      
-    Serial.println("Blink..");  
+    loglnI("Blink..");  
     digitalWrite(front_red_led, LOW);   // turn the LED off by making the voltage LOW
     digitalWrite(LED_BUILTIN, LOW);   // turn the LED off by making the voltage LOW
     delay(300);   
@@ -235,7 +235,7 @@ void setup() {
   pAdvertising->addServiceUUID(SERVICE_UUID);
   pAdvertising->setScanResponse(true);
   BLEDevice::startAdvertising();
-  Serial.println("BLE advertising started. Waiting for a client connection...");
+  loglnI("BLE advertising started. Waiting for a client connection...");
 }
 
 void loop() {
@@ -312,6 +312,8 @@ void loop() {
     int tempLights = currentLights;
     pLightsCharacteristic->setValue(tempLights); // Set initial value
     pLightsCharacteristic->notify(); // Notify connected client if configured with NOTIFY property
+
+    loglnI("BLE device updated");
   }
 
   delay(50);
