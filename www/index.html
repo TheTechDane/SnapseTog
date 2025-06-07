@@ -448,7 +448,6 @@
 
         stopButton.addEventListener('click', () => {
             if (bluetoothDevice && bluetoothDevice.gatt.connected) {
-                writeCharacteristic(speedCharacteristic, 0); // Set speed to 0
                 writeCharacteristic(directionCharacteristic, 0); // Set direction to STOP
             }
             showMessage('Train stopped.', 'info');
@@ -482,15 +481,6 @@
             }
             // UI will be updated by notification from ESP32.
             showMessage(`Sending lights toggle command.`, 'info');
-        });
-
-        // stopSensor Control
-        stopSensorButton.addEventListener('click', () => {
-            if (bluetoothDevice && bluetoothDevice.gatt.connected) {
-                writeCharacteristic(stopSensorCharacteristic, 1); // Send 1 to honk
-                // Note: ESP32 code should handle momentary honk and reset its internal state if needed.
-            }
-            showMessage('stopSensor honked!', 'info');
         });
 
         // Initialize UI state
