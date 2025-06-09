@@ -338,14 +338,23 @@
                 backwardsStopIndicator.classList.remove('bg-green-500');
                 backwardsStopIndicator.classList.remove('bg-red-500');
 
-                if (stopSensor == 1 || stopSensor == 3) 
+                if (stopSensor == 1 || stopSensor == 3) {
                     forwardStopIndicator.classList.add('bg-red-500');
-                else
+                    forwardButton.disabled = 1;   
+                }               
+                else {
                     forwardStopIndicator.classList.add('bg-green-500');
-                if (stopSensor == 2 || stopSensor == 3) 
+                    forwardButton.disabled = 0;  
+                }
+                if (stopSensor == 2 || stopSensor == 3) {
                     backwardsStopIndicator.classList.add('bg-red-500');
-                else
+                    backwardButton.disabled = 1;
+                }
+                else {
                     backwardsStopIndicator.classList.add('bg-green-500');
+                    backwardButton.disabled = 0;
+                }
+                    
                 oldStopSensorStatus = stopSensor;
                 console.log(`Received stopsensor change (${value})`);
             }
