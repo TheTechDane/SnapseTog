@@ -3,6 +3,7 @@ const urlsToCache = [
     './',
     'index.html',
     'manifest.json',
+    'favicon.ico'
     // Tailwind CSS is loaded from CDN, so it won't be cached by this worker
     // You could add specific asset paths here if you had local images/fonts
 ];
